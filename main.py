@@ -80,18 +80,26 @@ from config.settings import settings
 # from models.exceptions import ScraperError
 from tools.linkedin_scraper import LinkedInScraperTool
 from llm.gemini import GeminiLLM
+from agents.job_application_agnet import JobApplicationAgent
 
 logger = logging.getLogger(__name__)
 
 async def run():
     client = Client(api_key=settings.GOOGLE_API_KEY)
     llm = GeminiLLM(client)
-    
-    prompt = input("user input: ")
-    system = "just repeat the word"
 
-    response = await llm.generate(prompt, system=system)
+    agent = JobApplicationAgent(llm)
+    url = input("enter the url: ")
+    response = await agent.run(url)
+
+    # llm = GeminiLLM(client)
+    # 
+    # prompt = input("user input: ")
+    # system = "just repeat the word"
+    #
+    # response = await llm.generate(prompt, system=system)
     print(response)
+
 
 
 def main():
