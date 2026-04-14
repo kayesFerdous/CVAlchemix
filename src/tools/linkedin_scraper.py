@@ -76,7 +76,7 @@ class LinkedInScraperTool(BaseTool):
     def _validate_url(url: str) -> None:
         if not LINKEDIN_JOB_URL_PATTERN.match(url):
             raise InvalidURLError(
-                f"Expected a LinkedIn job URL (https://www.linkedin.com/jobs/view/...), "
+                f"Expected a LinkedIn job URL (https://www.linkedin.com/jobs/...), "
                 f"got: {url}"
             )
 

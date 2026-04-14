@@ -19,6 +19,6 @@ SELECTOR_JOB_DESCRIPTION: str = ".jobs-description__content"
 # ---------------------------------------------------------------------------
 
 LINKEDIN_JOB_URL_PATTERN: re.Pattern[str] = re.compile(
-    r"^https?://(www\.)?linkedin\.com/jobs/view/\d+",
+    r"^https?://(www\.)?linkedin\.com/jobs/",
     re.IGNORECASE,
 )
