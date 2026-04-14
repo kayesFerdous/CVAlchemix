@@ -73,20 +73,33 @@
 
 import asyncio
 import logging
+from google.genai import Client
 
 from config.logging import setup_logging
 from config.settings import settings
-from models.exceptions import ScraperError
+# from models.exceptions import ScraperError
 from tools.linkedin_scraper import LinkedInScraperTool
+from llm.gemini import GeminiLLM
 
 logger = logging.getLogger(__name__)
 
+async def run():
+    client = Client(api_key=settings.GOOGLE_API_KEY)
+    llm = GeminiLLM(client)
+    
+    prompt = input("user input: ")
+    system = "just repeat the word"
+
+    response = await llm.generate(prompt, system=system)
+    print(response)
+
 
 def main():
-    setup_logging(settings.LOG_LEVEL)
-    tool = LinkedInScraperTool()
-    url = input("Enter the url: ")
-    asyncio.run(tool.run(url))
+    # setup_logging(settings.LOG_LEVEL)
+    # tool = LinkedInScraperTool()
+
+    # url = input("Enter the url: ")
+    asyncio.run(run())
 
 if __name__ == "__main__":
     main()
