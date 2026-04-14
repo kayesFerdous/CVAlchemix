@@ -1,4 +1,3 @@
-from abc import abstractmethod
 from google.genai import Client, errors
 from google.genai.types import GenerateContentConfig, Content, Part
 
