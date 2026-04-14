@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     # --- Paths ---------------------------------------------------------------
     PROFILE_DIR: str = "./linkedin_profile"
     OUTPUT_DIR: str = "./output"
+    CV_LOCATION: str = "/home/kayes/Documents/emni/"
 
     # --- Browser -------------------------------------------------------------
     BROWSER_HEADLESS: bool = False

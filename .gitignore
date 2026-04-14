@@ -16,6 +16,9 @@ wheels/
 output/
 linkedin_profile/
 
+# test files
+test*.py
+
 # IDE
 .idea/
 .vscode/
