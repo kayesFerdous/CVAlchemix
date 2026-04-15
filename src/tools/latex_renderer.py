@@ -85,12 +85,12 @@ class LatexRenderer(BaseTool):
     name: str = "latex_renderer"
     description: str = "Renders CV data into a PDF via a Jinja2 LaTeX template."
 
-    def __init__(self, template_dir: str = "templates") -> None:
+    def __init__(self, template_dir: str = "/home/kayes/new_world/python/browse/templates") -> None:
         self._template_dir = template_dir
         self._env = self._create_environment(template_dir)
 
     # ------------------------------------------------------------------ #
-    #  Jinja2 environment                                                 #
+    #  Jinja2 environment                                                #
     # ------------------------------------------------------------------ #
     def _create_environment(self, template_dir: str) -> Environment:
         """Create a Jinja2 environment configured for LaTeX rendering."""
@@ -111,7 +111,7 @@ class LatexRenderer(BaseTool):
         return env
 
     # ------------------------------------------------------------------ #
-    #  Validation                                                         #
+    #  Validation                                                        #
     # ------------------------------------------------------------------ #
     @staticmethod
     def _validate_data(data: dict[str, Any]) -> None:
@@ -127,7 +127,7 @@ class LatexRenderer(BaseTool):
             raise ValueError("contact.full_name is required")
 
     # ------------------------------------------------------------------ #
-    #  Template rendering                                                 #
+    #  Template rendering                                                #
     # ------------------------------------------------------------------ #
     def render_template(
         self,
@@ -150,7 +150,7 @@ class LatexRenderer(BaseTool):
         return rendered
 
     # ------------------------------------------------------------------ #
-    #  Compilation                                                        #
+    #  Compilation                                                       #
     # ------------------------------------------------------------------ #
     def compile_to_pdf(self, tex_content: str, output_path: str) -> str:
         output_path_obj = Path(output_path).resolve()

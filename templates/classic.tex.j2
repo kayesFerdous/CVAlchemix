@@ -34,14 +34,15 @@
     {}{0em}
     {}
     [\titlerule]
-\titlespacing{\section}{0pt}{8pt}{4pt}
+\titlespacing{\section}{0pt}{5pt}{3pt}
 
 %--- Tight bullet lists ---
 \setlist[itemize]{
     leftmargin=1.5em,
-    itemsep=1pt,
+    itemsep=0pt,
     parsep=0pt,
-    topsep=2pt,
+    topsep=-3pt, % <-- Changed from 1pt to a negative value
+    partopsep=0pt % <-- Added to remove extra paragraph spacing
 }
 
 %--- Helper: right-aligned column in a two-col row ---
@@ -98,7 +99,7 @@
     \item \VAR{bullet | latex_escape}
 \BLOCK{ endfor }
 \end{itemize}
-\vspace{2pt}
+\vspace{1pt}
 \BLOCK{ endfor }
 
 %--- PROJECTS -----------------------------------------------------------------
@@ -106,27 +107,24 @@
 \section{Projects}
 
 \BLOCK{ for project in data.projects }
-\begin{tabularx}{\textwidth}{@{}X r@{}}
-    \multicolumn{1}{@{}l}{%
-        \textbf{\VAR{project.name | latex_escape}}%
+\noindent
+\textbf{\VAR{project.name | latex_escape}}%
 \BLOCK{ if project.tech_stack }
-        \ | \ \textit{\VAR{project.tech_stack | join(", ") | latex_escape}}%
+\ | \ \textit{\VAR{project.tech_stack | join(", ") | latex_escape}}%
 \BLOCK{ endif }
-    } &
-    \raggedleft
+\hfill
 \BLOCK{ if project.repo }
-    \href{\VAR{project.repo | url_escape}}{GitHub}%
+\href{\VAR{project.repo | url_escape}}{GitHub}%
 \BLOCK{ endif }
 \BLOCK{ if project.url }
-\BLOCK{ if project.repo } | \BLOCK{ endif }
-    \href{\VAR{project.url | url_escape}}{Live Demo}%
+\BLOCK{ if project.repo } $|$ \BLOCK{ endif }
+\href{\VAR{project.url | url_escape}}{Live Demo}%
 \BLOCK{ endif }
-    \tabularnewline
-\end{tabularx}
+\par\vspace{1pt}
 \begin{itemize}
     \item \VAR{project.description | latex_escape}
 \end{itemize}
-\vspace{2pt}
+\vspace{1pt}
 \BLOCK{ endfor }
 \BLOCK{ endif }
 
@@ -185,7 +183,7 @@
 \BLOCK{ for section in data.custom_sections }
 \section{\VAR{section.title | latex_escape}}
 
-\BLOCK{ for item in section.items }
+\BLOCK{ for item in section['items'] }
 \noindent
 \BLOCK{ if item.label }\textbf{\VAR{item.label | latex_escape}}: \BLOCK{ endif }
 \VAR{item.description | latex_escape}
