@@ -12,7 +12,7 @@ class BaseLLM(ABC):
         *,
         system: str,
         json_output: bool,
-        temperature: float,
+        temperature: float = 0,
     ) -> str | CVData| None:
         """Return a plain-text completion."""
         ...
