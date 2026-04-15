@@ -1,7 +1,8 @@
 from llm.base import BaseLLM
-from models.schemas import JobPost
+from models.schemas import CVData, JobPost
 from tools.linkedin_scraper import LinkedInScraperTool
 from prompts.cv_rewrite_prompt import get_system_prompt, get_user_prompt_template
+from test2 import cv
 
 class JobApplicationAgent:
     def __init__(self, llm: BaseLLM) -> None:
@@ -26,7 +27,6 @@ class JobApplicationAgent:
         """
 
 
-        cv = "CV goes there" #TODO: load the saved cv
 
         user_prompt = get_user_prompt_template(job_description, cv_text=cv)
 
@@ -35,7 +35,9 @@ class JobApplicationAgent:
             system=self._system_prompt,
             json_output=True,
         )
-        if response:
+        if isinstance(response, str):
             return response
+        elif isinstance(response, CVData):
+            return str(response)
         else:
-            return "there was an error"
+            return "there was an error" + f"{response}"

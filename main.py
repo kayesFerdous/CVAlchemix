@@ -98,7 +98,7 @@ async def run():
     # system = "just repeat the word"
     #
     # response = await llm.generate(prompt, system=system)
-    print(response)
+    print(response.)
 
 
 
