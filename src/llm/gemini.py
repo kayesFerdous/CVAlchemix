@@ -37,11 +37,12 @@ class GeminiLLM(BaseLLM):
                 contents=contents,
                 config=config,
             )
+            
+            # print(f"gemini response:\n{response.parsed}")
 
             if response and response.text:
-                if json_output:
-                    clean_json = response.text.strip().removeprefix("```json").removesuffix("```").strip()
-                    return CVData.model_validate_json(clean_json)
+                if json_output and response.parsed:
+                    return CVData.model_validate(response.parsed)
                 return response.text
 
             return None
