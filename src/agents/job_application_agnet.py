@@ -29,9 +29,11 @@ class JobApplicationAgent:
         cv = "CV goes there" #TODO: load the saved cv
 
         user_prompt = get_user_prompt_template(job_description, cv_text=cv)
+
         response = await self._llm.generate(
             prompt=user_prompt,
-            system=self._system_prompt
+            system=self._system_prompt,
+            json_output=True,
         )
         if response:
             return response

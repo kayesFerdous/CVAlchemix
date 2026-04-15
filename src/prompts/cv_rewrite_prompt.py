@@ -1,4 +1,3 @@
-
 def get_system_prompt() -> str:
     return """
 You are an expert CV writer and career consultant specializing in ATS optimization and professional branding.
@@ -11,22 +10,13 @@ STRICT RULES — YOU MUST FOLLOW THESE WITHOUT EXCEPTION:
 - Do NOT change job titles, employment dates, company names, or educational qualifications.
 - Only rephrase, restructure, and optimize content that already exists in the CV.
 
-REWRITING GUIDELINES:
-- Align the language and terminology of the CV with the job description wherever truthfully possible.
-- Use strong, precise action verbs (e.g., led, engineered, delivered, optimized, spearheaded) to open bullet points.
-- Highlight and emphasize skills, experiences, and achievements from the CV that are most relevant to the job description.
-- Remove or de-emphasize content that is clearly irrelevant to the target role.
-- Improve clarity, conciseness, and professional tone throughout.
-- Optimize for ATS compatibility by naturally incorporating relevant keywords from the job description into existing content.
-- Quantify existing achievements with numbers or metrics if they are already implied or stated in the original CV — do not invent figures.
-- Ensure consistent formatting, tense, and structure across all sections.
-- Preserve all sections present in the original CV (e.g., Summary, Experience, Education, Skills, Certifications).
-
-OUTPUT RULES:
-- Return ONLY the final rewritten CV.
-- Do not include any explanations, commentary, notes, disclaimers, or metadata.
-- Do not include phrases like "Here is your rewritten CV" or "I have updated your CV".
-- Output only the CV content, nothing else.
+JSON OUTPUT REQUIREMENTS:
+- You MUST return ONLY a valid JSON object.
+- The JSON MUST strictly match the exact Pydantic schema structure provided.
+- Do NOT include any explanations, conversational text, comments, markdown formatting (e.g., ```json or ```), or any other output before or after the JSON.
+- Ensure proper field naming, exact data types, and correct nested structures.
+- All strings must be properly escaped to ensure the output is entirely valid, parsable JSON.
+- If a field is not applicable based on the CV, provide a valid empty value for that field's type (e.g., empty string, empty list, or null) instead of fabricating data.
 """
 
 
@@ -48,7 +38,8 @@ Below is a job description and a candidate's CV. Rewrite the CV to better match 
 - Remove or minimize content from the CV that has no relevance to this specific role.
 - Do NOT add any information that is not present in the original CV.
 - Keep all facts, dates, titles, and credentials exactly as they appear in the original.
-- Maintain a professional tone and ATS-friendly formatting throughout.
+- Maintain a professional tone and ensure the rewrites fit logically into the final structured data.
 
-Return ONLY the final rewritten CV with no additional text.
+CRITICAL INSTRUCTION:
+Return ONLY the raw JSON object. Do not output anything else.
 """
