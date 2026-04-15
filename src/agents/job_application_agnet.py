@@ -26,7 +26,7 @@ class JobApplicationAgent:
         """
 
 
-        cv = "CV goes there"
+        cv = "CV goes there" #TODO: load the saved cv
 
         user_prompt = get_user_prompt_template(job_description, cv_text=cv)
         response = await self._llm.generate(

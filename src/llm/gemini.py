@@ -3,6 +3,7 @@ from google.genai.types import GenerateContentConfig, Content, Part
 
 from llm.base import BaseLLM
 from config.settings import settings
+from models.cv_schema import CVData
 
 class RateLimitError(Exception):
     pass
@@ -18,12 +19,15 @@ class GeminiLLM(BaseLLM):
         self,
         prompt: str,
         *,
-        system: str = "",
+        system: str,
+        json_output: bool,
         temperature: float = 0,
-    ) -> str | None:
+    ) -> str | CVData | None:
         config = GenerateContentConfig(
-            system_instruction=system or None,
-            temperature=temperature,
+            system_instruction = system or None,
+            temperature = temperature,
+            response_mime_type = "application/json" if json_output else None,
+            response_schema = CVData if json_output else None,
         )
         contents = Content(role="user", parts=[Part.from_text(text=prompt)])
 
@@ -35,7 +39,12 @@ class GeminiLLM(BaseLLM):
             )
 
             if response and response.text:
+                if json_output:
+                    clean_json = response.text.strip().removeprefix("```json").removesuffix("```").strip()
+                    return CVData.model_validate_json(clean_json)
                 return response.text
+
+            return None
 
         except errors.APIError as e:
             if e.code in [429, 503]:
