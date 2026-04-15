@@ -22,13 +22,14 @@ class GeminiLLM(BaseLLM):
         system: str,
         json_output: bool,
         temperature: float = 0,
-    ) -> str | CVData | None:
+    ) -> CVData | str:
         config = GenerateContentConfig(
-            system_instruction = system or None,
-            temperature = temperature,
-            response_mime_type = "application/json" if json_output else None,
-            response_schema = CVData if json_output else None,
+            system_instruction=system or None,
+            temperature=temperature,
+            response_mime_type="application/json" if json_output else None,
+            response_schema=CVData if json_output else None,
         )
+
         contents = Content(role="user", parts=[Part.from_text(text=prompt)])
 
         try:
@@ -37,17 +38,21 @@ class GeminiLLM(BaseLLM):
                 contents=contents,
                 config=config,
             )
-            
-            # print(f"gemini response:\n{response.parsed}")
 
-            if response and response.text:
-                if json_output and response.parsed:
-                    return CVData.model_validate(response.parsed)
+            if not response:
+                raise ValueError("Empty response from Gemini")
+
+            if json_output:
+                if response.parsed is None:
+                    raise ValueError("Expected CVData but got no parsed output")
+                return response.parsed #type:ignore
+
+            if response.text:
                 return response.text
 
-            return None
+            raise ValueError("No valid response returned")
 
         except errors.APIError as e:
             if e.code in [429, 503]:
                 raise RateLimitError("Rate limit exceeded")
-        
+            raise
