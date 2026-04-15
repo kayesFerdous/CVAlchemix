@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+from models.cv_schema import CVData
+
 class BaseLLM(ABC):
     provider: str = "no_provider"
 
@@ -8,8 +10,9 @@ class BaseLLM(ABC):
         self,
         prompt: str,
         *,
-        system: str = "",
-        temperature: float = 0,
-    ) -> str | None:
+        system: str,
+        json_output: bool,
+        temperature: float,
+    ) -> str | CVData| None:
         """Return a plain-text completion."""
         ...
