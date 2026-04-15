@@ -1,5 +1,6 @@
 from llm.base import BaseLLM
-from models.schemas import CVData, JobPost
+from models.schemas import JobPost
+from models.cv_schema import CVData
 from tools.linkedin_scraper import LinkedInScraperTool
 from prompts.cv_rewrite_prompt import get_system_prompt, get_user_prompt_template
 from test2 import cv
@@ -10,7 +11,7 @@ class JobApplicationAgent:
         self._scraper = LinkedInScraperTool()
         self._system_prompt = get_system_prompt()
 
-    async def run(self, job_url: str) -> str:
+    async def run(self, job_url: str) -> CVData | None:
         job_post: JobPost = await self._scraper.run(job_url)
 
         job_description = f"""
@@ -35,9 +36,7 @@ class JobApplicationAgent:
             system=self._system_prompt,
             json_output=True,
         )
-        if isinstance(response, str):
+        if isinstance(response, CVData):
             return response
-        elif isinstance(response, CVData):
-            return str(response)
-        else:
-            return "there was an error" + f"{response}"
+        return None
+        

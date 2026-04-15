@@ -1,0 +1,196 @@
+%-------------------------------------------------------------------------------
+% classic.tex.j2 — Academic CV style (Fardows-style layout)
+% Uses custom Jinja2 delimiters for LaTeX compatibility
+%-------------------------------------------------------------------------------
+\documentclass[11pt, a4paper]{article}
+
+\usepackage[
+    top=0.6in,
+    bottom=0.6in,
+    left=0.75in,
+    right=0.75in
+]{geometry}
+
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    urlcolor=black,
+    linkcolor=black,
+    pdftitle={CV - \VAR{data.contact.full_name | latex_escape}},
+}
+
+\usepackage{microtype}
+\usepackage{parskip}
+\usepackage{enumitem}
+\usepackage{tabularx}
+
+%--- No page numbers ---
+\pagestyle{empty}
+
+%--- Section style: small caps with horizontal rule ---
+\usepackage{titlesec}
+\titleformat{\section}
+    {\scshape\normalsize}
+    {}{0em}
+    {}
+    [\titlerule]
+\titlespacing{\section}{0pt}{8pt}{4pt}
+
+%--- Tight bullet lists ---
+\setlist[itemize]{
+    leftmargin=1.5em,
+    itemsep=1pt,
+    parsep=0pt,
+    topsep=2pt,
+}
+
+%--- Helper: right-aligned column in a two-col row ---
+\newcommand{\cvrow}[2]{%
+    \textbf{#1} & \raggedleft #2 \tabularnewline
+}
+\newcommand{\cvrowitalic}[2]{%
+    \textit{#1} & \raggedleft \textit{#2} \tabularnewline
+}
+
+%-------------------------------------------------------------------------------
+\begin{document}
+
+%--- HEADER -------------------------------------------------------------------
+\begin{center}
+    {\LARGE \textbf{\VAR{data.contact.full_name | latex_escape}}}\\[4pt]
+    \VAR{data.contact.phone | latex_escape}
+\BLOCK{ if data.contact.email }
+    \ | \ \href{mailto:\VAR{data.contact.email | url_escape}}{\VAR{data.contact.email | latex_escape}}
+\BLOCK{ endif }
+\BLOCK{ if data.contact.portfolio }
+    \ | \ \href{\VAR{data.contact.portfolio | url_escape}}{\VAR{data.contact.portfolio | latex_escape}}
+\BLOCK{ endif }
+    \\[2pt]
+\BLOCK{ if data.contact.github }
+    \href{\VAR{data.contact.github | url_escape}}{GitHub}
+\BLOCK{ endif }
+\BLOCK{ if data.contact.linkedin }
+    \ | \ \href{\VAR{data.contact.linkedin | url_escape}}{LinkedIn}
+\BLOCK{ endif }
+\end{center}
+
+%--- EDUCATION ----------------------------------------------------------------
+\section{Education}
+
+\BLOCK{ for edu in data.education }
+\begin{tabularx}{\textwidth}{@{}X r@{}}
+    \cvrow{\VAR{edu.institution | latex_escape}}{\VAR{edu.location | latex_escape if edu.location else ""}}
+    \cvrowitalic{\VAR{edu.degree | latex_escape}\BLOCK{ if edu.grade } | GPA: \VAR{edu.grade | latex_escape}\BLOCK{ endif }}{\BLOCK{ if edu.start }\VAR{edu.start | latex_escape} -- \BLOCK{ endif }\VAR{edu.end | latex_escape}}
+\end{tabularx}
+\vspace{2pt}
+\BLOCK{ endfor }
+
+%--- EXPERIENCE ---------------------------------------------------------------
+\section{Experience}
+
+\BLOCK{ for job in data.experience }
+\begin{tabularx}{\textwidth}{@{}X r@{}}
+    \cvrow{\VAR{job.title | latex_escape}}{\VAR{job.start | latex_escape} -- \VAR{job.end | latex_escape}}
+    \cvrowitalic{\VAR{job.company | latex_escape}}{\VAR{job.location | latex_escape if job.location else ""}}
+\end{tabularx}
+\begin{itemize}
+\BLOCK{ for bullet in job.bullets }
+    \item \VAR{bullet | latex_escape}
+\BLOCK{ endfor }
+\end{itemize}
+\vspace{2pt}
+\BLOCK{ endfor }
+
+%--- PROJECTS -----------------------------------------------------------------
+\BLOCK{ if data.projects }
+\section{Projects}
+
+\BLOCK{ for project in data.projects }
+\begin{tabularx}{\textwidth}{@{}X r@{}}
+    \multicolumn{1}{@{}l}{%
+        \textbf{\VAR{project.name | latex_escape}}%
+\BLOCK{ if project.tech_stack }
+        \ | \ \textit{\VAR{project.tech_stack | join(", ") | latex_escape}}%
+\BLOCK{ endif }
+    } &
+    \raggedleft
+\BLOCK{ if project.repo }
+    \href{\VAR{project.repo | url_escape}}{GitHub}%
+\BLOCK{ endif }
+\BLOCK{ if project.url }
+\BLOCK{ if project.repo } | \BLOCK{ endif }
+    \href{\VAR{project.url | url_escape}}{Live Demo}%
+\BLOCK{ endif }
+    \tabularnewline
+\end{tabularx}
+\begin{itemize}
+    \item \VAR{project.description | latex_escape}
+\end{itemize}
+\vspace{2pt}
+\BLOCK{ endfor }
+\BLOCK{ endif }
+
+%--- TECHNICAL SKILLS ---------------------------------------------------------
+\BLOCK{ if data.skill_groups }
+\section{Technical Skills}
+
+\BLOCK{ for group in data.skill_groups }
+\noindent\textbf{\VAR{group.category | latex_escape}}: \VAR{group.skills | join(", ") | latex_escape}\\[2pt]
+\BLOCK{ endfor }
+\BLOCK{ endif }
+
+%--- CERTIFICATIONS -----------------------------------------------------------
+\BLOCK{ if data.certifications }
+\section{Certifications}
+
+\BLOCK{ for cert in data.certifications }
+\noindent
+\textbf{\VAR{cert.name | latex_escape}}
+\BLOCK{ if cert.issuer } --- \VAR{cert.issuer | latex_escape}\BLOCK{ endif }
+\BLOCK{ if cert.year } \hfill \VAR{cert.year | latex_escape}\BLOCK{ endif }
+\BLOCK{ if cert.url } \ \href{\VAR{cert.url | url_escape}}{[Verify]}\BLOCK{ endif }\\[2pt]
+\BLOCK{ endfor }
+\BLOCK{ endif }
+
+%--- LANGUAGES ----------------------------------------------------------------
+\BLOCK{ if data.languages }
+\section{Languages}
+
+\noindent
+\BLOCK{ for lang in data.languages }
+\textbf{\VAR{lang.name | latex_escape}}: \VAR{lang.level | latex_escape}
+\BLOCK{ if not loop.last } \quad \BLOCK{ endif }
+\BLOCK{ endfor }
+\BLOCK{ endif }
+
+%--- VOLUNTEER ----------------------------------------------------------------
+\BLOCK{ if data.volunteer }
+\section{Volunteer Work}
+
+\BLOCK{ for vol in data.volunteer }
+\begin{tabularx}{\textwidth}{@{}X r@{}}
+    \cvrow{\VAR{vol.role | latex_escape}}{\VAR{vol.start | latex_escape if vol.start else ""}\BLOCK{ if vol.start and vol.end } -- \BLOCK{ endif }\VAR{vol.end | latex_escape if vol.end else ""}}
+    \multicolumn{2}{@{}l@{}}{\textit{\VAR{vol.organization | latex_escape}}} \tabularnewline
+\end{tabularx}
+\BLOCK{ if vol.description }
+\begin{itemize}
+    \item \VAR{vol.description | latex_escape}
+\end{itemize}
+\BLOCK{ endif }
+\vspace{2pt}
+\BLOCK{ endfor }
+\BLOCK{ endif }
+
+%--- CUSTOM SECTIONS ----------------------------------------------------------
+\BLOCK{ for section in data.custom_sections }
+\section{\VAR{section.title | latex_escape}}
+
+\BLOCK{ for item in section.items }
+\noindent
+\BLOCK{ if item.label }\textbf{\VAR{item.label | latex_escape}}: \BLOCK{ endif }
+\VAR{item.description | latex_escape}
+\BLOCK{ if item.url } \ \href{\VAR{item.url | url_escape}}{[link]}\BLOCK{ endif }\\[2pt]
+\BLOCK{ endfor }
+\BLOCK{ endfor }
+
+\end{document}
