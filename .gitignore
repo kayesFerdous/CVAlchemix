@@ -17,6 +17,7 @@ output/
 linkedin_profile/
 output.pdf
 output.tex
+cv/
 
 # test files
 test*.py
