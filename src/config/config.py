@@ -1,13 +1,28 @@
 import json
-from platformdirs import user_config_dir
 from pathlib import Path
 
-APP_NAME = "CVAlchemix"
+from platformdirs import user_config_dir
+
+APP_NAME = "cvalchemix"
+config_dir = Path(user_config_dir(APP_NAME))
+PROFILE_DIR = config_dir / "linkedin_profile"
+
+
+def ensure_config_dir() -> Path:
+    config_dir.mkdir(parents=True, exist_ok=True)
+    return config_dir
+
+
+def ensure_profile_dir() -> Path:
+    ensure_config_dir()
+    PROFILE_DIR.mkdir(parents=True, exist_ok=True)
+    return PROFILE_DIR
+
+
+ensure_config_dir()
 
 def get_config_path() -> Path:
-    config_dir = Path(user_config_dir(APP_NAME))
-    config_dir.mkdir(parents=True, exist_ok=True)
-    return config_dir / "config.json"
+    return ensure_config_dir() / "config.json"
 
 def save_config(data: dict):
     path = get_config_path()
