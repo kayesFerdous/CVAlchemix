@@ -6,6 +6,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MIN_PYTHON_MAJOR=3
 MIN_PYTHON_MINOR=10
 CLI_NAME="cvalchemix"
+PROJECT_GIT_URL="https://github.com/kayesFerdous/CVAlchemix.git"
 
 if [[ -t 1 ]]; then
   GREEN='\033[0;32m'
@@ -41,6 +42,22 @@ detect_python() {
   done
   return 1
 }
+
+resolve_install_target() {
+  if [[ -n "${CVALCHEMIX_INSTALL_TARGET:-}" ]]; then
+    printf '%s' "$CVALCHEMIX_INSTALL_TARGET"
+    return 0
+  fi
+
+  if [[ -f "$ROOT_DIR/pyproject.toml" ]]; then
+    printf '%s' "$ROOT_DIR"
+    return 0
+  fi
+
+  printf 'git+%s' "$PROJECT_GIT_URL"
+}
+
+INSTALL_TARGET="$(resolve_install_target)"
 
 python_cmd="$(detect_python)" || die "Python 3.10+ is required, but no Python interpreter was found. Install Python from https://www.python.org/downloads/ and try again."
 
@@ -84,7 +101,7 @@ ensure_user_bin_on_path() {
 install_with_pipx() {
   if command -v pipx >/dev/null 2>&1; then
     step "Installing via pipx..."
-    pipx install --force "$ROOT_DIR"
+    pipx install --force "$INSTALL_TARGET"
     return 0
   fi
   return 1
@@ -93,7 +110,7 @@ install_with_pipx() {
 install_with_pip_user() {
   step "Installing via pip..."
   "$python_cmd" -m pip install --user --upgrade pip
-  "$python_cmd" -m pip install --user "$ROOT_DIR"
+  "$python_cmd" -m pip install --user "$INSTALL_TARGET"
 }
 
 step "Installing dependencies..."
