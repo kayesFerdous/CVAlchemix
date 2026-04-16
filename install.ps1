@@ -6,6 +6,8 @@ $RootDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $PackageName = 'cvalchemix'
 $MinPythonMajor = 3
 $MinPythonMinor = 10
+$ProjectGitUrl = 'https://github.com/kayesFerdous/CVAlchemix.git'
+$InstallTarget = $null
 $PythonExe = $null
 $PythonArgs = @()
 
@@ -56,6 +58,20 @@ function Invoke-Python {
   & $PythonExe @PythonArgs @Args
 }
 
+function Resolve-InstallTarget {
+  if ($env:CVALCHEMIX_INSTALL_TARGET) {
+    return $env:CVALCHEMIX_INSTALL_TARGET
+  }
+
+  if (Test-Path (Join-Path $RootDir 'pyproject.toml')) {
+    return $RootDir
+  }
+
+  return "git+$ProjectGitUrl"
+}
+
+$InstallTarget = Resolve-InstallTarget
+
 Write-Step 'Checking Python...'
 $PythonVersion = (Invoke-Python -Args @('-c', "import sys; print('{}.{}.{}'.format(*sys.version_info[:3]))")).Trim()
 $VersionParts = $PythonVersion.Split('.')
@@ -95,7 +111,7 @@ $PipxAvailable = [bool](Get-Command pipx -ErrorAction SilentlyContinue)
 
 if ($PipxAvailable) {
   Write-Step 'Installing via pipx...'
-  & pipx install --force $RootDir
+  & pipx install --force $InstallTarget
   if (-not (Get-Command $PackageName -ErrorAction SilentlyContinue)) {
     Ensure-UserScriptsOnPath
   }
@@ -103,7 +119,7 @@ if ($PipxAvailable) {
   Write-Warn 'pipx is not installed. Falling back to pip --user installation.'
   Write-Step 'Installing via pip...'
   Invoke-Python -Args @('-m', 'pip', 'install', '--user', '--upgrade', 'pip') | Out-Null
-  Invoke-Python -Args @('-m', 'pip', 'install', '--user', $RootDir)
+  Invoke-Python -Args @('-m', 'pip', 'install', '--user', $InstallTarget)
   Ensure-UserScriptsOnPath
 }
 
