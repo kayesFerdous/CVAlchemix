@@ -8,7 +8,7 @@ from playwright.async_api import (
     Page,
     async_playwright,
 )
-from config.constants import (
+from src.config.constants import (
     LINKEDIN_JOB_URL_PATTERN,
     SELECTOR_COMPANY_NAME,
     SELECTOR_JOB_DESCRIPTION,
@@ -16,15 +16,15 @@ from config.constants import (
     SELECTOR_LOCATION,
     SELECTOR_SEE_MORE_BUTTON,
 )
-from config.settings import settings
-from models.exceptions import (
+from src.config.settings import settings
+from src.models.exceptions import (
     BrowserLaunchError,
     ExtractionError,
     InvalidURLError,
     PageLoadError,
 )
-from models.schemas import JobPost
-from tools.base import BaseTool
+from src.models.schemas import JobPost
+from src.tools.base import BaseTool
 
 logger = logging.getLogger(__name__)
 

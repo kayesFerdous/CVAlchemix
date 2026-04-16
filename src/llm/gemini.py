@@ -1,9 +1,9 @@
 from google.genai import Client, errors
 from google.genai.types import GenerateContentConfig, Content, Part
 
-from llm.base import BaseLLM
-from config.settings import settings
-from models.cv_schema import CVData
+from src.llm.base import BaseLLM
+from src.config.settings import settings
+from src.models.cv_schema import CVData
 
 class RateLimitError(Exception):
     pass

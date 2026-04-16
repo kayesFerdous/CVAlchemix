@@ -6,7 +6,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from config.config import get_config_path, load_config, save_config
+from src.config.config import get_config_path, load_config, save_config
 
 app = typer.Typer(help="CVAlchemix CLI")
 console = Console()
@@ -47,8 +47,8 @@ async def _run_agent(url: str, output_dir: str, api_key: str, cv_text: str) -> s
 		sys.path.insert(0, src_dir_str)
 
 	from google.genai import Client
-	from llm.gemini import GeminiLLM
-	from agents.job_application_agnet import JobApplicationAgent
+	from src.llm.gemini import GeminiLLM
+	from src.agents.job_application_agnet import JobApplicationAgent
 
 	client = Client(api_key=api_key)
 	llm = GeminiLLM(client)

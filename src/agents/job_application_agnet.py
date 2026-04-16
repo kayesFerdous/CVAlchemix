@@ -2,14 +2,14 @@ import asyncio
 from pathlib import Path
 from datetime import datetime
 
-from config.ui import console
-from llm.base import BaseLLM
-from config.logging import logging
-from models.schemas import JobPost
-from models.cv_schema import CVData
-from tools.latex_renderer import LatexRenderer
-from tools.linkedin_scraper import LinkedInScraperTool
-from prompts.cv_rewrite_prompt import get_system_prompt, get_user_prompt_template
+from src.config.ui import console
+from src.llm.base import BaseLLM
+from src.config.logging import logging
+from src.models.schemas import JobPost
+from src.models.cv_schema import CVData
+from src.tools.latex_renderer import LatexRenderer
+from src.tools.linkedin_scraper import LinkedInScraperTool
+from src.prompts.cv_rewrite_prompt import get_system_prompt, get_user_prompt_template
 
 logger = logging.getLogger(__name__)
 
