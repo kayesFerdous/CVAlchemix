@@ -3,8 +3,7 @@ from pathlib import Path
 
 from platformdirs import user_config_dir
 
-APP_NAME = "cvalchemix"
-config_dir = Path(user_config_dir(APP_NAME))
+config_dir = Path(user_config_dir("cvalchemix"))
 PROFILE_DIR = config_dir / "linkedin_profile"
 
 

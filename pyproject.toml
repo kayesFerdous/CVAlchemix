@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "cvalchemix"
 version = "0.1.0"
@@ -17,3 +21,9 @@ dependencies = [
 [project.scripts]
 cvx = "src.cli.main:main"
 cvalchemix = "src.cli.main:app"
+
+[tool.setuptools]
+package-dir = {"" = "."}
+
+[tool.setuptools.packages.find]
+include = ["src*"]
