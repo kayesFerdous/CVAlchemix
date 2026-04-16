@@ -17,7 +17,7 @@ class Settings(BaseSettings):
 
     # --- Browser -------------------------------------------------------------
     BROWSER_HEADLESS: bool = False
-    SCRAPE_TIMEOUT_MS: int = 30
+    SCRAPE_TIMEOUT_MS: int = 30_000
 
     # --- Resilience ----------------------------------------------------------
     MAX_RETRIES: int = 3
