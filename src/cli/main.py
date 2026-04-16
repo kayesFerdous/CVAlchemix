@@ -6,7 +6,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from src.config.config import get_config_path, load_config, save_config
+from config.config import get_config_path, load_config, save_config
 
 app = typer.Typer(help="CVAlchemix CLI")
 console = Console()
