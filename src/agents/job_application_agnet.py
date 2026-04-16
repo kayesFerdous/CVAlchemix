@@ -1,7 +1,8 @@
+import asyncio
 from pathlib import Path
 from datetime import datetime
 
-from test2 import cv
+from config.ui import console
 from llm.base import BaseLLM
 from config.logging import logging
 from models.schemas import JobPost
@@ -10,18 +11,21 @@ from tools.latex_renderer import LatexRenderer
 from tools.linkedin_scraper import LinkedInScraperTool
 from prompts.cv_rewrite_prompt import get_system_prompt, get_user_prompt_template
 
-
 logger = logging.getLogger(__name__)
 
 class JobApplicationAgent:
-    def __init__(self, llm: BaseLLM) -> None:
+    def __init__(self, llm: BaseLLM, cv: str) -> None:
         self._llm = llm
+        self.cv = cv
         self._system_prompt = get_system_prompt()
         self._scraper = LinkedInScraperTool()
         self._renderer = LatexRenderer()
 
     async def run(self, job_url: str, output_path: str) -> str | None:
-        job_post: JobPost = await self._scraper.run(job_url)
+        # Step 1: Scrape job post
+        with console.status("[bold cyan]Step 1/3:[/bold cyan] Scraping job posting from LinkedIn..."):
+            job_post: JobPost = await self._scraper.run(job_url)
+        console.print(f"[green]✔[/green] Scraped: [bold]{job_post.title}[/bold] at {job_post.company}")
 
         job_description = f"""
         Job Title: {job_post.title}
@@ -33,13 +37,24 @@ class JobApplicationAgent:
         Job Description : {job_post.description}
         """
 
-        user_prompt = get_user_prompt_template(job_description, cv_text=cv)
+        user_prompt = get_user_prompt_template(job_description, cv_text=self.cv)
 
-        response: CVData = await self._llm.generate( #type:ignore
-            prompt=user_prompt,
-            system=self._system_prompt,
-            json_output=True,
-        )
+        # Step 2: Generate tailored CV via LLM
+        with console.status("[bold cyan]Step 2/3:[/bold cyan] Generating tailored CV with AI (this may take up to 60s)..."):
+            try:
+                response: CVData = await asyncio.wait_for(
+                    self._llm.generate( #type:ignore
+                        prompt=user_prompt,
+                        system=self._system_prompt,
+                        json_output=True,
+                    ),
+                    timeout=120,
+                )
+            except asyncio.TimeoutError:
+                console.print("[red]✗[/red] LLM request timed out after 120 seconds.")
+                raise RuntimeError("LLM generation timed out. Try again or check your API key / model.")
+        console.print("[green]✔[/green] AI-generated CV received")
+
         data = response.model_dump(exclude_none=True)
 
         now = datetime.now()
@@ -50,15 +65,18 @@ class JobApplicationAgent:
         base_output_path = Path(output_path) if output_path else Path(".")
         output_file = base_output_path / "cv" / f"{company_slug}_{date_time}" / "cv.pdf"
 
-        try:
-            pdf = self._renderer.run(data, output_path=str(output_file))
-            print(f"\nPDF generated successfully: {pdf}")
-            return pdf
-        except ValueError as exc:
-            logger.error("Data validation failed: %s", exc)
-            print(f"\nCV data is invalid: {exc}")
-        except RuntimeError as exc:
-            logger.error("Rendering / compilation failed: %s", exc)
-            print(f"\nPDF generation failed: {exc}")
-            print("   Check the intermediate .tex file for details.")
-        return None
+        # Step 3: Render PDF
+        with console.status("[bold cyan]Step 3/3:[/bold cyan] Rendering PDF..."):
+            try:
+                pdf = self._renderer.run(data, output_path=str(output_file))
+            except ValueError as exc:
+                logger.error("Data validation failed: %s", exc)
+                console.print(f"[red]✗ CV data is invalid:[/red] {exc}")
+                return None
+            except RuntimeError as exc:
+                logger.error("Rendering / compilation failed: %s", exc)
+                console.print(f"[red]✗ PDF generation failed:[/red] {exc}")
+                console.print("   Check the intermediate .tex file for details.")
+                return None
+
+        return pdf

@@ -38,8 +38,8 @@ def _load_required_config() -> tuple[str, str]:
 	return api_key, cv_path
 
 
-async def _run_agent_with_progress(url: str, output_dir: str, api_key: str, cv_text: str) -> str | None:
-	"""Run the job-application agent with step-by-step progress messages."""
+async def _run_agent(url: str, output_dir: str, api_key: str, cv_text: str) -> str | None:
+	"""Run the job-application agent."""
 	# Support modules that import from src-rooted packages like "llm" and "agents".
 	src_dir = Path(__file__).resolve().parents[1]
 	src_dir_str = str(src_dir)
@@ -48,64 +48,13 @@ async def _run_agent_with_progress(url: str, output_dir: str, api_key: str, cv_t
 
 	from google.genai import Client
 	from llm.gemini import GeminiLLM
-	import agents.job_application_agnet as agent_module
-
-	agent_module.cv = cv_text
+	from agents.job_application_agnet import JobApplicationAgent
 
 	client = Client(api_key=api_key)
 	llm = GeminiLLM(client)
-	agent = agent_module.JobApplicationAgent(llm)
-
-	# Step 1: Scrape job post
-	with console.status("[bold cyan]Step 1/3:[/bold cyan] Scraping job posting from LinkedIn..."):
-		job_post = await agent._scraper.run(url)
-	console.print(f"[green]✔[/green] Scraped: [bold]{job_post.title}[/bold] at {job_post.company}")
-
-	# Step 2: Generate tailored CV via LLM
-	from prompts.cv_rewrite_prompt import get_user_prompt_template, get_system_prompt
-	from models.cv_schema import CVData
-
-	job_description = f"""
-	Job Title: {job_post.title}
-	Company: {job_post.company}
-	Location: {job_post.location}
-	Job Description : {job_post.description}
-	"""
-	user_prompt = get_user_prompt_template(job_description, cv_text=agent_module.cv)
-
-	with console.status("[bold cyan]Step 2/3:[/bold cyan] Generating tailored CV with AI (this may take up to 60s)..."):
-		try:
-			response: CVData = await asyncio.wait_for(
-				agent._llm.generate(
-					prompt=user_prompt,
-					system=agent._system_prompt,
-					json_output=True,
-				),
-				timeout=120,
-			)
-		except asyncio.TimeoutError:
-			console.print("[red]✗[/red] LLM request timed out after 120 seconds.")
-			raise RuntimeError("LLM generation timed out. Try again or check your API key / model.")
-	console.print("[green]✔[/green] AI-generated CV received")
-
-	# Step 3: Render PDF
-	data = response.model_dump(exclude_none=True)  # type: ignore[union-attr]
-
-	from datetime import datetime
-	now = datetime.now()
-	date_time = f"{now:%Y-%m-%d}_{now.hour}_{now:%M}"
-	company_name = job_post.company or "unknown_company"
-	company_slug = "_".join(company_name.split())
-
-	base_output_path = Path(output_dir) if output_dir else Path(".")
-	output_file = base_output_path / "cv" / f"{company_slug}_{date_time}" / "cv.pdf"
-
-	with console.status("[bold cyan]Step 3/3:[/bold cyan] Rendering PDF..."):
-		from tools.latex_renderer import LatexRenderer
-		renderer = LatexRenderer()
-		pdf = renderer.run(data, output_path=str(output_file))
-
-	return pdf
+	agent = JobApplicationAgent(llm, cv=cv_text)
+	
+	return await agent.run(url, output_dir)
 
 
 @app.command()
@@ -173,7 +122,7 @@ def generate(
 		raise typer.Exit(code=1)
 
 	try:
-		output_pdf = asyncio.run(_run_agent_with_progress(url, output, api_key, cv_text))
+		output_pdf = asyncio.run(_run_agent(url, output, api_key, cv_text))
 	except ModuleNotFoundError as exc:
 		missing_name = exc.name or ""
 		if missing_name == "playwright" or missing_name.startswith("playwright."):
