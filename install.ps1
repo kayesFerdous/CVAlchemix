@@ -1,9 +1,12 @@
-param()
+param(
+  [switch]$Uninstall
+)
 
 $ErrorActionPreference = 'Stop'
 
 $RootDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $PackageName = 'cvalchemix'
+$LegacyPackageName = 'browse'
 $MinPythonMajor = 3
 $MinPythonMinor = 10
 $ProjectGitUrl = 'https://github.com/kayesFerdous/CVAlchemix.git'
@@ -58,6 +61,110 @@ function Invoke-Python {
   & $PythonExe @PythonArgs @Args
 }
 
+function Remove-AppDataDirs {
+  $pythonScript = @'
+from pathlib import Path
+import shutil
+
+dirs = {
+    Path.home() / ".config" / "cvalchemix",
+    Path.home() / ".config" / "CVAlchemix",
+    Path.home() / ".cache" / "cvalchemix",
+    Path.home() / ".local" / "share" / "cvalchemix",
+}
+
+try:
+    from platformdirs import (
+        user_cache_dir,
+        user_config_dir,
+        user_data_dir,
+        user_log_dir,
+        user_state_dir,
+    )
+except Exception:
+    pass
+else:
+    for resolver in (
+        user_config_dir,
+        user_data_dir,
+        user_cache_dir,
+        user_state_dir,
+        user_log_dir,
+    ):
+        try:
+            dirs.add(Path(resolver("cvalchemix")))
+        except Exception:
+            pass
+
+for path in sorted(dirs):
+    if path.exists():
+        shutil.rmtree(path, ignore_errors=True)
+'@
+
+  try {
+    Invoke-Python -Args @('-c', $pythonScript) | Out-Null
+  } catch {
+    # Ignore data cleanup failures to keep uninstall resilient.
+  }
+}
+
+function Remove-LocalLaunchers {
+  try {
+    $UserBase = (Invoke-Python -Args @('-c', 'import site; print(site.getuserbase())')).Trim()
+    $UserScripts = Join-Path $UserBase 'Scripts'
+
+    $Launchers = @(
+      'cvalchemix.exe',
+      'cvalchemix-script.py',
+      'cvx.exe',
+      'cvx-script.py',
+      'browse.exe',
+      'browse-script.py'
+    )
+
+    foreach ($Launcher in $Launchers) {
+      Remove-Item (Join-Path $UserScripts $Launcher) -Force -ErrorAction SilentlyContinue
+    }
+  } catch {
+    # No-op when user scripts directory cannot be resolved.
+  }
+}
+
+function Remove-StalePipxVenvs {
+  $pipxRoots = @(
+    (Join-Path $HOME '.local/share/pipx/venvs'),
+    (Join-Path $HOME '.local/pipx/venvs')
+  )
+
+  foreach ($root in $pipxRoots) {
+    Remove-Item (Join-Path $root $PackageName) -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item (Join-Path $root $LegacyPackageName) -Recurse -Force -ErrorAction SilentlyContinue
+  }
+}
+
+function Run-Uninstall {
+  Write-Step 'Removing CLI installation...'
+
+  if (Get-Command pipx -ErrorAction SilentlyContinue) {
+    try { & pipx uninstall $PackageName | Out-Null } catch {}
+    try { & pipx uninstall $LegacyPackageName | Out-Null } catch {}
+  }
+
+  try {
+    Invoke-Python -Args @('-m', 'pip', 'uninstall', '--yes', $PackageName, $LegacyPackageName) | Out-Null
+  } catch {
+    # Ignore pip uninstall failures when package isn't installed in this interpreter.
+  }
+
+  Remove-LocalLaunchers
+  Remove-StalePipxVenvs
+
+  Write-Step 'Removing app data and config...'
+  Remove-AppDataDirs
+
+  Write-Ok 'Uninstall complete. cvalchemix files were removed from this machine.'
+}
+
 function Resolve-InstallTarget {
   if ($env:CVALCHEMIX_INSTALL_TARGET) {
     return $env:CVALCHEMIX_INSTALL_TARGET
@@ -71,6 +178,11 @@ function Resolve-InstallTarget {
 }
 
 $InstallTarget = Resolve-InstallTarget
+
+if ($Uninstall) {
+  Run-Uninstall
+  exit 0
+}
 
 Write-Step 'Checking Python...'
 $PythonVersion = (Invoke-Python -Args @('-c', "import sys; print('{}.{}.{}'.format(*sys.version_info[:3]))")).Trim()

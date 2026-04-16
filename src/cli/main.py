@@ -1,6 +1,8 @@
 import asyncio
+import os
 import shutil
 import sys
+import shlex
 from pathlib import Path
 
 import typer
@@ -14,6 +16,7 @@ console = Console()
 
 API_KEY_FIELD = "gemini_api_key"
 CV_PATH_FIELD = "base_cv_path"
+PACKAGE_NAMES = ("cvalchemix", "browse")
 
 
 def _mask_api_key(value: str) -> str:
@@ -102,32 +105,144 @@ def show_config() -> None:
 
 
 @app.command()
-def delete() -> None:
-	"""Delete all local CVAlchemix data (config, profile, and stored state)."""
-	if not config_dir.exists():
-		console.print("[yellow]No CVAlchemix data directory found.[/yellow]")
-		return
+def delete(
+	data_only: bool = typer.Option(
+		False,
+		"--data-only",
+		help="Delete local CVAlchemix data only, keep the installed CLI.",
+	),
+	yes: bool = typer.Option(
+		False,
+		"--yes",
+		"-y",
+		help="Skip the confirmation prompt.",
+	),
+) -> None:
+	"""Uninstall CVAlchemix and delete local data traces."""
 
-	confirmation = typer.prompt(
-		"This will permanently delete all CVAlchemix data. Continue? (y/N)",
-		default="n",
-		show_default=False,
-	).strip().lower()
+	def _handoff_uninstall() -> None:
+		pipx = shutil.which("pipx")
+		if pipx:
+			commands = [
+				f"{shlex.quote(pipx)} uninstall {shlex.quote(package)} >/dev/null 2>&1 || true"
+				for package in PACKAGE_NAMES
+			]
+			os.execv("/bin/sh", ["sh", "-lc", "; ".join(commands)])
 
-	if confirmation not in {"y", "yes"}:
-		console.print("[yellow]Delete cancelled.[/yellow]")
-		return
+		os.execv(
+			sys.executable,
+			[
+				sys.executable,
+				"-m",
+				"pip",
+				"uninstall",
+				"-y",
+				*PACKAGE_NAMES,
+			],
+		)
 
-	try:
-		shutil.rmtree(config_dir)
-	except PermissionError:
-		console.print(f"[red]Permission denied while deleting:[/red] {config_dir}")
-		raise typer.Exit(code=1)
-	except OSError as exc:
-		console.print(f"[red]Could not delete data directory:[/red] {exc}")
-		raise typer.Exit(code=1)
+	def _remove_installer_path_blocks() -> list[tuple[Path, str]]:
+		failed: list[tuple[Path, str]] = []
+		profile_files = [Path.home() / ".profile", Path.home() / ".zprofile"]
+		marker = "# Added by CVAlchemix installer"
+		line = 'export PATH="$HOME/.local/bin:$PATH"'
 
-	console.print(f"[green]Deleted CVAlchemix data:[/green] {config_dir}")
+		for profile_path in profile_files:
+			if not profile_path.exists():
+				continue
+
+			try:
+				lines = profile_path.read_text(encoding="utf-8").splitlines()
+			except OSError as exc:
+				failed.append((profile_path, str(exc)))
+				continue
+
+			new_lines: list[str] = []
+			skip_next = False
+			for current in lines:
+				if current == marker:
+					skip_next = True
+					continue
+
+				if skip_next and current == line:
+					skip_next = False
+					continue
+
+				skip_next = False
+				new_lines.append(current)
+
+			try:
+				profile_path.write_text("\n".join(new_lines).rstrip() + "\n", encoding="utf-8")
+			except OSError as exc:
+				failed.append((profile_path, str(exc)))
+
+		return failed
+
+	def _remove_data_dirs() -> tuple[list[Path], list[tuple[Path, str]]]:
+		removed: list[Path] = []
+		failed: list[tuple[Path, str]] = []
+		candidate_dirs = {
+			config_dir,
+			Path.home() / ".config" / "cvalchemix",
+			Path.home() / ".config" / "CVAlchemix",
+			Path.home() / ".cache" / "cvalchemix",
+			Path.home() / ".local" / "share" / "cvalchemix",
+		}
+
+		for path in sorted(candidate_dirs, key=str):
+			if not path.exists():
+				continue
+			try:
+				shutil.rmtree(path)
+				removed.append(path)
+			except OSError as exc:
+				failed.append((path, str(exc)))
+
+		return removed, failed
+
+	mode = "delete all local data" if data_only else "uninstall the CLI and delete all local data"
+	if not yes:
+		confirmed = typer.confirm(
+			f"This will permanently {mode}. Continue?",
+			default=False,
+		)
+		if not confirmed:
+			console.print("[yellow]Delete cancelled.[/yellow]")
+			return
+
+	cleanup_failures: list[str] = []
+	if not data_only:
+		for profile, reason in _remove_installer_path_blocks():
+			cleanup_failures.append(f"Could not update profile {profile}: {reason}")
+
+	removed_data, data_failures = _remove_data_dirs()
+
+	if not data_only:
+		console.print("[green]Local cleanup completed.[/green]")
+
+	if removed_data:
+		console.print("[green]Deleted local data directories:[/green]")
+		for path in removed_data:
+			console.print(f"  - {path}")
+	else:
+		console.print("[yellow]No local data directories were found.[/yellow]")
+
+	if cleanup_failures or data_failures:
+		console.print("[yellow]Cleanup warnings:[/yellow]")
+		for message in cleanup_failures:
+			console.print(f"  - {message}")
+		for path, reason in data_failures:
+			console.print(f"  - Could not remove {path}: {reason}")
+		if data_only:
+			raise typer.Exit(code=1)
+
+	console.print("[green]Delete complete.[/green]")
+
+	if not data_only:
+		console.print("[cyan]Handing off to package uninstaller...[/cyan]")
+		_handoff_uninstall()
+
+	raise typer.Exit(code=0)
 
 
 @app.command()

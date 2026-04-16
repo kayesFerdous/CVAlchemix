@@ -6,7 +6,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MIN_PYTHON_MAJOR=3
 MIN_PYTHON_MINOR=10
 CLI_NAME="cvalchemix"
+LEGACY_PACKAGE_NAME="browse"
 PROJECT_GIT_URL="https://github.com/kayesFerdous/CVAlchemix.git"
+ACTION="${1:-install}"
 
 if [[ -t 1 ]]; then
   GREEN='\033[0;32m'
@@ -30,6 +32,34 @@ err() { printf '%b%s%b\n' "$RED" "$1" "$RESET" >&2; }
 die() {
   err "$1"
   exit 1
+}
+
+usage() {
+  cat <<'EOF'
+Usage:
+  ./install.sh            Install CVAlchemix
+  ./install.sh install    Install CVAlchemix
+  ./install.sh uninstall  Uninstall CVAlchemix and remove local app data
+  ./install.sh --uninstall
+EOF
+}
+
+normalize_action() {
+  case "$ACTION" in
+    install|"")
+      ACTION="install"
+      ;;
+    uninstall|--uninstall)
+      ACTION="uninstall"
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      die "Unknown action: $ACTION"
+      ;;
+  esac
 }
 
 detect_python() {
@@ -57,9 +87,129 @@ resolve_install_target() {
   printf 'git+%s' "$PROJECT_GIT_URL"
 }
 
-INSTALL_TARGET="$(resolve_install_target)"
+remove_profile_export_block() {
+  local profile_file="$1"
+  local tmp_file
+
+  [[ -f "$profile_file" ]] || return 0
+
+  tmp_file="${profile_file}.tmp.cvalchemix"
+  awk '
+    BEGIN { skip_next = 0 }
+    $0 == "# Added by CVAlchemix installer" {
+      skip_next = 1
+      next
+    }
+    skip_next == 1 && $0 == "export PATH=\"$HOME/.local/bin:$PATH\"" {
+      skip_next = 0
+      next
+    }
+    {
+      skip_next = 0
+      print
+    }
+  ' "$profile_file" > "$tmp_file"
+
+  mv "$tmp_file" "$profile_file"
+}
+
+remove_installer_path_blocks() {
+  remove_profile_export_block "${HOME}/.profile"
+  remove_profile_export_block "${HOME}/.zprofile"
+}
+
+remove_app_data_dirs() {
+  "$python_cmd" - <<'PY'
+import shutil
+from pathlib import Path
+
+dirs = {
+    Path.home() / ".config" / "cvalchemix",
+    Path.home() / ".config" / "CVAlchemix",
+    Path.home() / ".cache" / "cvalchemix",
+    Path.home() / ".local" / "share" / "cvalchemix",
+}
+
+try:
+    from platformdirs import (
+        user_cache_dir,
+        user_config_dir,
+        user_data_dir,
+        user_log_dir,
+        user_state_dir,
+    )
+except Exception:
+    pass
+else:
+    for resolver in (
+        user_config_dir,
+        user_data_dir,
+        user_cache_dir,
+        user_state_dir,
+        user_log_dir,
+    ):
+        try:
+            dirs.add(Path(resolver("cvalchemix")))
+        except Exception:
+            pass
+
+for path in sorted(dirs):
+    if path.exists():
+        shutil.rmtree(path, ignore_errors=True)
+        print(path)
+PY
+}
+
+uninstall_with_pipx() {
+  if command -v pipx >/dev/null 2>&1; then
+    pipx uninstall "$CLI_NAME" >/dev/null 2>&1 || true
+    pipx uninstall "$LEGACY_PACKAGE_NAME" >/dev/null 2>&1 || true
+  fi
+}
+
+uninstall_with_pip_user() {
+  if "$python_cmd" -m pip --version >/dev/null 2>&1; then
+    "$python_cmd" -m pip uninstall --yes "$CLI_NAME" "$LEGACY_PACKAGE_NAME" >/dev/null 2>&1 || true
+  fi
+}
+
+remove_local_launchers() {
+  rm -f \
+    "${HOME}/.local/bin/${CLI_NAME}" \
+    "${HOME}/.local/bin/cvx" \
+    "${HOME}/.local/bin/${LEGACY_PACKAGE_NAME}"
+}
+
+remove_stale_pipx_dirs() {
+  rm -rf \
+    "${HOME}/.local/share/pipx/venvs/${CLI_NAME}" \
+    "${HOME}/.local/share/pipx/venvs/${LEGACY_PACKAGE_NAME}"
+}
+
+run_uninstall() {
+  step "Removing CLI installation..."
+  uninstall_with_pipx
+  uninstall_with_pip_user
+  remove_local_launchers
+  remove_stale_pipx_dirs
+
+  step "Removing app data and config..."
+  remove_app_data_dirs >/dev/null 2>&1 || true
+  remove_installer_path_blocks
+
+  ok "Uninstall complete. cvalchemix files were removed from this machine."
+}
+
+normalize_action
 
 python_cmd="$(detect_python)" || die "Python 3.10+ is required, but no Python interpreter was found. Install Python from https://www.python.org/downloads/ and try again."
+
+if [[ "$ACTION" == "uninstall" ]]; then
+  run_uninstall
+  exit 0
+fi
+
+INSTALL_TARGET="$(resolve_install_target)"
 
 step "Checking Python..."
 python_version="$($python_cmd -c 'import sys; print("%d.%d.%d" % sys.version_info[:3])')"
