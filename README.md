@@ -6,6 +6,12 @@
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
+## 🎬 Demo
+
+[View demo GIF](assets/demo/cvalchemix.gif)
+
+![CVAlchemix demo](assets/demo/cvalchemix.gif)
+
 ## ✨ Features
 
 - Scrapes LinkedIn job title, company, location, and full job description with Playwright.
