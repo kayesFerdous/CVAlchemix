@@ -3,6 +3,9 @@ from pathlib import Path
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from src.config.config import PROFILE_DIR as DEFAULT_PROFILE_DIR
+from src.config.config import ensure_profile_dir
+
 
 class Settings(BaseSettings):
 
@@ -11,8 +14,8 @@ class Settings(BaseSettings):
     GOOGLE_API_KEY: str = ""
 
     # --- Paths ---------------------------------------------------------------
-    PROFILE_DIR: str = "./linkedin_profile"
-    OUTPUT_DIR: str = "./output"
+    PROFILE_DIR: Path = DEFAULT_PROFILE_DIR
+    OUTPUT_DIR: Path = Path("./output")
     CV_LOCATION: str = "/home/kayes/Documents/emni/"
 
     # --- Browser -------------------------------------------------------------
@@ -33,12 +36,19 @@ class Settings(BaseSettings):
 
     # -- Validators -----------------------------------------------------------
 
-    @field_validator("PROFILE_DIR", "OUTPUT_DIR")
+    @field_validator("PROFILE_DIR", mode="before")
     @classmethod
-    def _ensure_directory_exists(cls, v: str) -> str:
+    def _ensure_profile_directory_exists(cls, _v: str | Path) -> Path:
+        """Always use the managed profile directory under config_dir."""
+        return ensure_profile_dir()
+
+    @field_validator("OUTPUT_DIR", mode="before")
+    @classmethod
+    def _ensure_output_directory_exists(cls, v: str | Path) -> Path:
         """Create the directory if it doesn't exist yet."""
-        Path(v).mkdir(parents=True, exist_ok=True)
-        return v
+        path = Path(v).expanduser()
+        path.mkdir(parents=True, exist_ok=True)
+        return path
 
     @field_validator("LOG_LEVEL")
     @classmethod

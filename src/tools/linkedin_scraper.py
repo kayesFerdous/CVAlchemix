@@ -86,7 +86,7 @@ class LinkedInScraperTool(BaseTool):
         try:
             pw = await async_playwright().start()
             browser = await pw.chromium.launch_persistent_context(
-                user_data_dir=settings.PROFILE_DIR,
+                user_data_dir=str(settings.PROFILE_DIR),
                 headless=settings.BROWSER_HEADLESS,
             )
             logger.debug("Browser launched (headless=%s).", settings.BROWSER_HEADLESS)

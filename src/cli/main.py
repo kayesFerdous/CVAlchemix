@@ -1,4 +1,5 @@
 import asyncio
+import shutil
 import sys
 from pathlib import Path
 
@@ -6,7 +7,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from src.config.config import get_config_path, load_config, save_config
+from src.config.config import config_dir, get_config_path, load_config, save_config
 
 app = typer.Typer(help="CVAlchemix CLI")
 console = Console()
@@ -98,6 +99,35 @@ def show_config() -> None:
 	table.add_row("config_file", str(get_config_path()))
 
 	console.print(table)
+
+
+@app.command()
+def delete() -> None:
+	"""Delete all local CVAlchemix data (config, profile, and stored state)."""
+	if not config_dir.exists():
+		console.print("[yellow]No CVAlchemix data directory found.[/yellow]")
+		return
+
+	confirmation = typer.prompt(
+		"This will permanently delete all CVAlchemix data. Continue? (y/N)",
+		default="n",
+		show_default=False,
+	).strip().lower()
+
+	if confirmation not in {"y", "yes"}:
+		console.print("[yellow]Delete cancelled.[/yellow]")
+		return
+
+	try:
+		shutil.rmtree(config_dir)
+	except PermissionError:
+		console.print(f"[red]Permission denied while deleting:[/red] {config_dir}")
+		raise typer.Exit(code=1)
+	except OSError as exc:
+		console.print(f"[red]Could not delete data directory:[/red] {exc}")
+		raise typer.Exit(code=1)
+
+	console.print(f"[green]Deleted CVAlchemix data:[/green] {config_dir}")
 
 
 @app.command()
