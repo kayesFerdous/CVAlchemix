@@ -19,11 +19,12 @@ dependencies = [
 ]
 
 [project.scripts]
-cvx = "src.cli.main:main"
-cvalchemix = "src.cli.main:app"
+cvx = "cvalchemix.cli.main:main"
+cvalchemix = "cvalchemix.cli.main:app"
 
 [tool.setuptools]
-package-dir = {"" = "."}
+package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
-include = ["src*"]
+where = ["src"]
+include = ["cvalchemix*"]

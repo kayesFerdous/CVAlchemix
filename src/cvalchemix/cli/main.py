@@ -9,7 +9,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from src.config.config import config_dir, get_config_path, load_config, save_config
+from cvalchemix.config.config import config_dir, get_config_path, load_config, save_config
 
 app = typer.Typer(help="CVAlchemix CLI")
 console = Console()
@@ -44,15 +44,9 @@ def _load_required_config() -> tuple[str, str]:
 
 async def _run_agent(url: str, output_dir: str, api_key: str, cv_text: str) -> str | None:
 	"""Run the job-application agent."""
-	# Support modules that import from src-rooted packages like "llm" and "agents".
-	src_dir = Path(__file__).resolve().parents[1]
-	src_dir_str = str(src_dir)
-	if src_dir_str not in sys.path:
-		sys.path.insert(0, src_dir_str)
-
 	from google.genai import Client
-	from src.llm.gemini import GeminiLLM
-	from src.agents.job_application_agnet import JobApplicationAgent
+	from cvalchemix.llm.gemini import GeminiLLM
+	from cvalchemix.agents.job_application_agnet import JobApplicationAgent
 
 	client = Client(api_key=api_key)
 	llm = GeminiLLM(client)

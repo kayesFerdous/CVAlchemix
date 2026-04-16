@@ -8,7 +8,7 @@ from playwright.async_api import (
     Page,
     async_playwright,
 )
-from src.config.constants import (
+from cvalchemix.config.constants import (
     LINKEDIN_JOB_URL_PATTERN,
     SELECTOR_COMPANY_NAME,
     SELECTOR_JOB_DESCRIPTION,
@@ -16,15 +16,15 @@ from src.config.constants import (
     SELECTOR_LOCATION,
     SELECTOR_SEE_MORE_BUTTON,
 )
-from src.config.settings import settings
-from src.models.exceptions import (
+from cvalchemix.config.settings import settings
+from cvalchemix.models.exceptions import (
     BrowserLaunchError,
     ExtractionError,
     InvalidURLError,
     PageLoadError,
 )
-from src.models.schemas import JobPost
-from src.tools.base import BaseTool
+from cvalchemix.models.schemas import JobPost
+from cvalchemix.tools.base import BaseTool
 
 logger = logging.getLogger(__name__)
 

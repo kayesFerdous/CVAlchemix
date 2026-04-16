@@ -1,9 +1,9 @@
 from google.genai import Client, errors
 from google.genai.types import GenerateContentConfig, Content, Part
 
-from src.llm.base import BaseLLM
-from src.config.settings import settings
-from src.models.cv_schema import CVData
+from cvalchemix.llm.base import BaseLLM
+from cvalchemix.config.settings import settings
+from cvalchemix.models.cv_schema import CVData
 
 class RateLimitError(Exception):
     pass
@@ -23,7 +23,7 @@ class GeminiLLM(BaseLLM):
         json_output: bool,
         temperature: float = 0,
     ) -> CVData | str:
-        config = GenerateContentConfig(
+        config = GenerateContentConfig(  # type: ignore[call-arg]
             system_instruction=system or None,
             temperature=temperature,
             response_mime_type="application/json" if json_output else None,

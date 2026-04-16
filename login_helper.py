@@ -11,9 +11,17 @@ Usage:
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
 from playwright.sync_api import sync_playwright
 
-from src.config.settings import settings
+ROOT_DIR = Path(__file__).resolve().parent
+SRC_DIR = ROOT_DIR / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+from cvalchemix.config.settings import settings
 
 
 def main() -> None:
