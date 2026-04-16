@@ -1,11 +1,14 @@
-from config.logging import logging
+from pathlib import Path
+from datetime import datetime
+
+from test2 import cv
 from llm.base import BaseLLM
+from config.logging import logging
 from models.schemas import JobPost
 from models.cv_schema import CVData
 from tools.latex_renderer import LatexRenderer
 from tools.linkedin_scraper import LinkedInScraperTool
 from prompts.cv_rewrite_prompt import get_system_prompt, get_user_prompt_template
-from test2 import cv
 
 
 logger = logging.getLogger(__name__)
@@ -37,12 +40,18 @@ class JobApplicationAgent:
             system=self._system_prompt,
             json_output=True,
         )
-
         data = response.model_dump(exclude_none=True)
-        output_file = output_path+"cv/cv_"+job_post.company.replace(" ", "_")+".pdf" #type:ignore
+
+        now = datetime.now()
+        date_time = f"{now:%Y-%m-%d}_{now.hour}_{now:%M}"
+        company_name = job_post.company or "unknown_company"
+        company_slug = "_".join(company_name.split())
+
+        base_output_path = Path(output_path) if output_path else Path(".")
+        output_file = base_output_path / "cv" / f"{company_slug}_{date_time}" / "cv.pdf"
 
         try:
-            pdf = self._renderer.run(data, output_path=output_file)
+            pdf = self._renderer.run(data, output_path=str(output_file))
             print(f"\nPDF generated successfully: {pdf}")
             return pdf
         except ValueError as exc:
