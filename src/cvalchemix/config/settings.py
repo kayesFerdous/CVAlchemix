@@ -3,8 +3,8 @@ from pathlib import Path
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from src.config.config import PROFILE_DIR as DEFAULT_PROFILE_DIR
-from src.config.config import ensure_profile_dir
+from cvalchemix.config.config import PROFILE_DIR as DEFAULT_PROFILE_DIR
+from cvalchemix.config.config import ensure_profile_dir
 
 
 class Settings(BaseSettings):

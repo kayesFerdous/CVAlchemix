@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from src.models.cv_schema import CVData
+from cvalchemix.models.cv_schema import CVData
 
 class BaseLLM(ABC):
     provider: str = "no_provider"

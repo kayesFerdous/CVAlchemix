@@ -9,13 +9,14 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from src.config.config import config_dir, get_config_path, load_config, save_config
+from cvalchemix.config.config import config_dir, get_config_path, load_config, save_config
 
 app = typer.Typer(help="CVAlchemix CLI")
 console = Console()
 
 API_KEY_FIELD = "gemini_api_key"
 CV_PATH_FIELD = "base_cv_path"
+LINKEDIN_LOGIN_FIELD = "linkedin_login_configured"
 PACKAGE_NAMES = ("cvalchemix", "browse")
 
 
@@ -28,15 +29,45 @@ def _mask_api_key(value: str) -> str:
 	return f"{'*' * (len(secret) - 4)}{secret[-4:]}"
 
 
+def _has_saved_linkedin_login(config: dict) -> bool:
+	if bool(config.get(LINKEDIN_LOGIN_FIELD)):
+		return True
+
+	try:
+		from cvalchemix.config.settings import settings
+	except Exception:
+		return False
+
+	profile_dir = Path(settings.PROFILE_DIR)
+	markers = (
+		profile_dir / "Local State",
+		profile_dir / "Default" / "Preferences",
+		profile_dir / "Default" / "Cookies",
+		profile_dir / "Default" / "Network" / "Cookies",
+	)
+	return any(marker.exists() for marker in markers)
+
+
 def _load_required_config() -> tuple[str, str]:
 	config = load_config()
 	api_key = str(config.get(API_KEY_FIELD, "")).strip()
 	cv_path = str(config.get(CV_PATH_FIELD, "")).strip()
 
+	missing_steps: list[str] = []
 	if not api_key or not cv_path:
-		console.print(
-			"[red]Missing configuration.[/red] Run [bold]cvalchemix configure[/bold] first."
+		missing_steps.append(
+			"Run [bold]cvalchemix configure[/bold] to set your Gemini API key and base CV file."
 		)
+
+	if not _has_saved_linkedin_login(config):
+		missing_steps.append(
+			"Run [bold]cvalchemix login[/bold] to sign in to LinkedIn and save your browser session."
+		)
+
+	if missing_steps:
+		console.print("[red]Missing required setup.[/red]")
+		for step in missing_steps:
+			console.print(f"- {step}")
 		raise typer.Exit(code=1)
 
 	return api_key, cv_path
@@ -44,15 +75,9 @@ def _load_required_config() -> tuple[str, str]:
 
 async def _run_agent(url: str, output_dir: str, api_key: str, cv_text: str) -> str | None:
 	"""Run the job-application agent."""
-	# Support modules that import from src-rooted packages like "llm" and "agents".
-	src_dir = Path(__file__).resolve().parents[1]
-	src_dir_str = str(src_dir)
-	if src_dir_str not in sys.path:
-		sys.path.insert(0, src_dir_str)
-
 	from google.genai import Client
-	from src.llm.gemini import GeminiLLM
-	from src.agents.job_application_agnet import JobApplicationAgent
+	from cvalchemix.llm.gemini import GeminiLLM
+	from cvalchemix.agents.job_application_agnet import JobApplicationAgent
 
 	client = Client(api_key=api_key)
 	llm = GeminiLLM(client)
@@ -79,6 +104,60 @@ def configure() -> None:
 
 	save_config({API_KEY_FIELD: api_key, CV_PATH_FIELD: str(cv_path)})
 	console.print(f"[green]Configuration saved.[/green] {get_config_path()}")
+
+
+@app.command()
+def login() -> None:
+	"""Open LinkedIn login and save a reusable browser session."""
+	try:
+		from playwright.sync_api import sync_playwright
+	except ModuleNotFoundError:
+		console.print(
+			"[red]Missing dependency: playwright.[/red] Install it and run "
+			"[bold]playwright install[/bold], then retry."
+		)
+		raise typer.Exit(code=1)
+
+	from cvalchemix.config.settings import settings
+
+	profile_dir = Path(settings.PROFILE_DIR)
+	profile_dir.mkdir(parents=True, exist_ok=True)
+
+	console.print(f"Using profile directory: {profile_dir}")
+	console.print("A browser window will open. Log in to LinkedIn, then return here.")
+
+	try:
+		with sync_playwright() as pw:
+			browser = pw.chromium.launch_persistent_context(
+				user_data_dir=str(profile_dir),
+				headless=False,
+			)
+			try:
+				page = browser.new_page()
+				page.goto("https://www.linkedin.com/login")
+				typer.prompt(
+					"After login completes, press ENTER to save the session",
+					default="",
+					show_default=False,
+				)
+			finally:
+				browser.close()
+	except Exception as exc:
+		message = str(exc).lower()
+		if "playwright install" in message or "executable doesn't exist" in message:
+			console.print(
+				"[red]Playwright browser binaries are missing.[/red] Run "
+				"[bold]playwright install[/bold], then retry."
+			)
+			raise typer.Exit(code=1)
+
+		console.print(f"[red]LinkedIn login failed:[/red] {exc}")
+		raise typer.Exit(code=1)
+
+	save_config({LINKEDIN_LOGIN_FIELD: True})
+	console.print(
+		"[green]LinkedIn session saved.[/green] You can now run [bold]cvalchemix generate[/bold]."
+	)
 
 
 @app.command("show-config")
