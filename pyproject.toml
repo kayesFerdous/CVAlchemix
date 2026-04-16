@@ -1,5 +1,5 @@
 [project]
-name = "browse"
+name = "cvalchemix"
 version = "0.1.0"
 description = "LinkedIn job scraper and CV analysis toolkit"
 readme = "README.md"
@@ -15,5 +15,5 @@ dependencies = [
 ]
 
 [project.scripts]
-browse = "cli.main:main"
-cvalchemix = "cli.main:app"
+cvx = "src.cli.main:main"
+cvalchemix = "src.cli.main:app"
