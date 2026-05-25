@@ -27,3 +27,7 @@ test*.py
 .vscode/
 *.swp
 *.swo
+
+# Tool sessions
+.antigravitycli/
+

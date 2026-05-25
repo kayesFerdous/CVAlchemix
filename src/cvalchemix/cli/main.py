@@ -10,9 +10,13 @@ from rich.console import Console
 from rich.table import Table
 
 from cvalchemix.config.config import config_dir, get_config_path, load_config, save_config
+from cvalchemix.cli.conv import conv as _conv_handler
 
 app = typer.Typer(help="CVAlchemix CLI")
 console = Console()
+
+# Register the paste-to-compile command.
+app.command("conv")(_conv_handler)
 
 API_KEY_FIELD = "gemini_api_key"
 CV_PATH_FIELD = "base_cv_path"
