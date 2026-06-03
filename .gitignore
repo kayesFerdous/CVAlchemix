@@ -19,8 +19,8 @@ output.pdf
 output.tex
 cv/
 
-# test files
-test*.py
+# root-level scratch test files
+/test*.py
 
 # IDE
 .idea/
@@ -30,4 +30,3 @@ test*.py
 
 # Tool sessions
 .antigravitycli/
-

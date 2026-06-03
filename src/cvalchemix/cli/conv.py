@@ -1,6 +1,7 @@
 """cvalchemix conv – paste LaTeX, compile to PDF, open & exit."""
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -18,6 +19,53 @@ BASE_OUTPUT_DIR = Path("/home/kayes/Documents/kayes/job_hunt")
 
 # Sentinel the user types on its own line to finish pasting.
 _END_MARKER = "END"
+
+_PDFTEX_UNICODE_DIRECTIVE_RE = re.compile(
+    r"""
+    ^\s*
+    (?:
+        \\input\s*\{glyphtounicode\}
+        |
+        \\input\s+glyphtounicode
+        |
+        \\pdfgentounicode\s*=\s*\d+
+    )
+    \s*(?:%.*)?$
+    """,
+    re.VERBOSE,
+)
+
+_LINEBREAK_BARE_SPACING_RE = re.compile(
+    r"(?<!\\)\\\\(?!\\)\s*\[\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*\]"
+)
+
+
+def _normalize_tex_for_tectonic(tex_content: str) -> tuple[str, int, int]:
+    """Normalize common pasted-LaTeX issues before compiling with Tectonic.
+
+    Tectonic uses a XeTeX-based engine. Common resume templates copied from
+    pdfLaTeX examples often include ``glyphtounicode`` and ``\\pdfgentounicode``
+    lines for searchable PDFs, but those pdfTeX primitives fail under Tectonic.
+    XeTeX already emits Unicode text without those directives. LLM output also
+    sometimes writes line breaks like ``\\ [2]``; TeX requires a dimension unit,
+    so those bare numeric spacing values are treated as points.
+    """
+    normalized_lines: list[str] = []
+    removed_count = 0
+    fixed_spacing_count = 0
+
+    for line in tex_content.splitlines(keepends=True):
+        if _PDFTEX_UNICODE_DIRECTIVE_RE.match(line.rstrip("\r\n")):
+            removed_count += 1
+            continue
+        line, line_fixed_spacing_count = _LINEBREAK_BARE_SPACING_RE.subn(
+            lambda match: rf"\\[{match.group(1)}pt]",
+            line,
+        )
+        fixed_spacing_count += line_fixed_spacing_count
+        normalized_lines.append(line)
+
+    return "".join(normalized_lines), removed_count, fixed_spacing_count
 
 
 def _read_multiline(prompt_msg: str) -> str:
@@ -53,7 +101,21 @@ def _compile_tex(tex_content: str, output_dir: Path) -> Path:
     PDF is left behind (no .log / .aux / .out clutter).
     """
     tex_file = output_dir / "Fardows_Alam_Kayes.tex"
+    tex_content, removed_directives, fixed_spacings = _normalize_tex_for_tectonic(
+        tex_content
+    )
     tex_file.write_text(tex_content, encoding="utf-8")
+    if removed_directives:
+        console.print(
+            "[yellow]Note:[/yellow] Removed "
+            f"{removed_directives} pdfLaTeX-only Unicode directive(s) "
+            "that Tectonic does not support."
+        )
+    if fixed_spacings:
+        console.print(
+            "[yellow]Note:[/yellow] Added pt units to "
+            f"{fixed_spacings} LaTeX line-break spacing value(s)."
+        )
 
     tectonic = shutil.which("tectonic")
     if tectonic is None:
